@@ -4,7 +4,7 @@
 
 <br/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=22&pause=1000&color=58A6FF&center=true&vCenter=true&width=800&lines=📧+Building+Sendpilots+—+Email+Delivery+Platform;🔧+MTA+Engineer+%7C+Postfix+%7C+Haraka+%7C+PowerMTA;🛡️+SPF+%7C+DKIM+%7C+DMARC+%7C+BIMI+%7C+ARC+Specialist;🐳+PHP+%7C+Laravel+%7C+Python+%7C+Docker+%7C+Redis;🚀+High-Volume+Email+Delivery+at+Scale+%E2%80%94+99.9%25+Uptime)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=22&pause=1000&color=58A6FF&center=true&vCenter=true&width=800&lines=📧+Building+Sendpilots+—+Email+Delivery+SaaS;🔧+MTA+Engineer+%7C+Postal+%7C+Postfix+%7C+Haraka+%7C+PowerMTA;🛡️+SPF+%7C+DKIM+%7C+DMARC+%7C+BIMI+%7C+ARC+Specialist;🐳+Laravel+%7C+Next.js+%7C+Python+%7C+Docker+%7C+Redis;💳+Razorpay+Billing+%7C+sendpilots.app+Dashboard)](https://git.io/typing-svg)
 
 <br/>
 
@@ -27,16 +27,23 @@
 name:        Arun Kumar
 role:        Email Infrastructure Engineer
              Full-Stack Developer
-company:     Sendpilots (Email Delivery Platform)
+company:     Sendpilots
 
 expertise:
-  mta:       [ Postfix, Haraka, PowerMTA,
-               OpenSMTPD, Exim ]
-  auth:      [ SPF, DKIM, DMARC, BIMI,
-               ARC, MTA-STS ]
-  backend:   [ PHP, Laravel, Python, Node.js ]
+  mta:       [ Postal, Postfix, Haraka, PowerMTA,
+               KumoMTA, OpenSMTPD, Exim, MailerQ ]
+  auth:      [ SPF, DKIM, DMARC, BIMI, ARC,
+               MTA-STS, OpenDKIM, OpenDMARC ]
+  filtering: [ Rspamd, SpamAssassin, Amavis,
+               Postscreen, ClamAV, Milter ]
+  testing:   [ GlockApps, Mail-Tester, MXToolBox,
+               Google Postmaster, Microsoft SNDS ]
+  backend:   [ PHP, Laravel, Next.js, Python ]
+  frontend:  [ Next.js, TypeScript, Tailwind CSS ]
   infra:     [ Docker, Nginx, Redis, Linux ]
-  cloud:     [ AWS SES, DigitalOcean, Hetzner ]
+  cloud:     [ AWS, DigitalOcean, Hetzner, Cloudflare ]
+  automation:[ Selenium, Playwright, Python ]
+  billing:   [ Razorpay ]
 
 achievements:
   - "🦈 Pull Shark × 2"
@@ -45,7 +52,6 @@ achievements:
   - "🎯 Quickdraw"
 
 contact:     arun@sendpilots.com
-website:     sendpilots.com
 ```
 
 </td>
@@ -71,9 +77,11 @@ website:     sendpilots.com
 
 | MTA | Use Case | Status |
 |-----|----------|--------|
+| **Postal** | Open-source self-hosted MTA, full API control | ✅ Production |
 | **Postfix** | Production SMTP relay, inbound filtering | ✅ Production |
 | **Haraka** | Custom SMTP plugin development (Node.js) | ✅ Production |
-| **PowerMTA** | Enterprise high-volume sending (1M+/hr) | ✅ Experienced |
+| **PowerMTA (PMTA)** | Enterprise high-volume sending (1M+/hr) | ✅ Experienced |
+| **KumoMTA** | Modern high-performance Rust-based MTA | 🔧 Working |
 | **OpenSMTPD** | Lightweight deployments, filtering chains | 🔧 Working |
 | **Exim** | cPanel environments, custom routing rules | 🔧 Working |
 | **MailerQ** | Queue-based sending with REST API control | 📚 Studying |
@@ -88,6 +96,8 @@ website:     sendpilots.com
 ![MTA-STS](https://img.shields.io/badge/MTA--STS-Strict%20TLS-607D8B?style=flat-square&logo=letsencrypt&logoColor=white)
 ![TLS-RPT](https://img.shields.io/badge/TLS--RPT-TLS%20Reporting-795548?style=flat-square&logo=openssl&logoColor=white)
 ![DANE](https://img.shields.io/badge/DANE-DNS%20Auth%20Named%20Entities-009688?style=flat-square&logoColor=white)
+![OpenDKIM](https://img.shields.io/badge/OpenDKIM-DKIM%20Signing%20Daemon-1565C0?style=flat-square&logoColor=white)
+![OpenDMARC](https://img.shields.io/badge/OpenDMARC-DMARC%20Processing-6A1B9A?style=flat-square&logoColor=white)
 
 ### 📡 Protocols & Standards
 
@@ -149,16 +159,16 @@ website:     sendpilots.com
 ### 🗄️ Full Email DNS Setup
 
 ```dns
-; Complete production email DNS
-@          MX  10  mail.sendpilots.com.         ; Mail routing
-mail        A       <IP>                         ; MTA address
-mail       PTR      mail.sendpilots.com.         ; rDNS — critical for delivery
-@          TXT      "v=spf1 ip4:<IP> ~all"       ; SPF policy
-_dkim._domainkey TXT "v=DKIM1; k=rsa; p=..."   ; DKIM public key
-_dmarc     TXT      "v=DMARC1; p=reject; rua=mailto:dmarc@sendpilots.com"
-_mta-sts   TXT      "v=STSv1; id=202501..."     ; MTA-STS policy ID
-_smtp._tls TXT      "v=TLSRPTv1; rua=mailto:tls@sendpilots.com"
-default._bimi TXT   "v=BIMI1; l=https://...logo.svg; a=..."
+; Complete production email DNS setup
+@          MX  10  mail.yourdomain.com.          ; Mail routing
+mail        A       <SERVER_IP>                  ; MTA A record
+mail       PTR      mail.yourdomain.com.         ; rDNS — critical for deliverability
+@          TXT      "v=spf1 ip4:<SERVER_IP> ~all"     ; SPF policy
+_dkim._domainkey TXT "v=DKIM1; k=rsa; p=<PUBKEY>"   ; DKIM public key (OpenDKIM)
+_dmarc     TXT      "v=DMARC1; p=reject; rua=mailto:dmarc@yourdomain.com"
+_mta-sts   TXT      "v=STSv1; id=<TIMESTAMP>"   ; MTA-STS policy ID
+_smtp._tls TXT      "v=TLSRPTv1; rua=mailto:tls@yourdomain.com"
+default._bimi TXT   "v=BIMI1; l=https://yourdomain.com/logo.svg; a=..."
 ```
 
 ### ☁️ ESP / Cloud Email APIs
@@ -169,6 +179,27 @@ default._bimi TXT   "v=BIMI1; l=https://...logo.svg; a=..."
 ![Postmark](https://img.shields.io/badge/Postmark-FFDC00?style=flat-square&logoColor=black)
 ![Sparkpost](https://img.shields.io/badge/Sparkpost%2FBird-F44336?style=flat-square&logoColor=white)
 ![Brevo](https://img.shields.io/badge/Brevo-0B996E?style=flat-square&logoColor=white)
+![Postal](https://img.shields.io/badge/Postal-Self--Hosted%20MTA-6D28D9?style=flat-square&logoColor=white)
+
+### 💳 Billing & Payments
+
+![Razorpay](https://img.shields.io/badge/Razorpay-02042B?style=flat-square&logo=razorpay&logoColor=white)
+![Stripe](https://img.shields.io/badge/Stripe-008CDD?style=flat-square&logo=stripe&logoColor=white)
+
+### 📊 Deliverability Testing & Monitoring
+
+![Google Postmaster](https://img.shields.io/badge/Google%20Postmaster%20Tools-4285F4?style=flat-square&logo=google&logoColor=white)
+![Microsoft SNDS](https://img.shields.io/badge/Microsoft%20SNDS-0078D4?style=flat-square&logo=microsoft&logoColor=white)
+![GlockApps](https://img.shields.io/badge/GlockApps-Inbox%20Testing-FF6B35?style=flat-square&logoColor=white)
+![Mail-Tester](https://img.shields.io/badge/Mail--Tester-Spam%20Score-34A853?style=flat-square&logoColor=white)
+![MXToolBox](https://img.shields.io/badge/MXToolBox-DNS%2FBlacklist-E74C3C?style=flat-square&logoColor=white)
+![Validity](https://img.shields.io/badge/Validity%20%2F%20250ok-Reputation-8E44AD?style=flat-square&logoColor=white)
+
+### 🤖 Automation & Testing
+
+![Selenium](https://img.shields.io/badge/Selenium-43B02A?style=flat-square&logo=selenium&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white)
+![Python](https://img.shields.io/badge/Python%20Automation-3776AB?style=flat-square&logo=python&logoColor=white)
 
 ---
 
@@ -178,17 +209,17 @@ default._bimi TXT   "v=BIMI1; l=https://...logo.svg; a=..."
 
 ### Languages
 
-[![Languages](https://skillicons.dev/icons?i=php,python,js,html,css,bash&perline=6)](https://skillicons.dev)
+[![Languages](https://skillicons.dev/icons?i=php,python,ts,js,html,css,bash&perline=7)](https://skillicons.dev)
 
-| PHP | Python | JavaScript | HTML5 | CSS3 | Bash/Shell |
-|:---:|:---:|:---:|:---:|:---:|:---:|
+| PHP | Python | TypeScript | JavaScript | HTML5 | CSS3 | Bash/Shell |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 
 ### Frameworks & Libraries
 
-[![Frameworks](https://skillicons.dev/icons?i=laravel,nodejs,tailwind,bootstrap&perline=4)](https://skillicons.dev)
+[![Frameworks](https://skillicons.dev/icons?i=laravel,nextjs,nodejs,tailwind,bootstrap&perline=5)](https://skillicons.dev)
 
-| Laravel | Node.js | Tailwind CSS | Bootstrap |
-|:---:|:---:|:---:|:---:|
+| Laravel | Next.js | Node.js | Tailwind CSS | Bootstrap |
+|:---:|:---:|:---:|:---:|:---:|
 
 ### Databases & Caching
 
@@ -211,12 +242,22 @@ default._bimi TXT   "v=BIMI1; l=https://...logo.svg; a=..."
 | AWS | Cloudflare | DigitalOcean |
 |:---:|:---:|:---:|
 
-### Monitoring & Tools
+![Hetzner](https://img.shields.io/badge/Hetzner-D50C2D?style=flat-square&logo=hetzner&logoColor=white)
+![Vultr](https://img.shields.io/badge/Vultr-007BFC?style=flat-square&logo=vultr&logoColor=white)
 
-[![Tools](https://skillicons.dev/icons?i=grafana,postman,vscode,vim&perline=4)](https://skillicons.dev)
+### Monitoring & Observability
 
-| Grafana | Postman | VS Code | Vim |
-|:---:|:---:|:---:|:---:|
+[![Tools](https://skillicons.dev/icons?i=grafana,prometheus,postman,vscode,vim&perline=5)](https://skillicons.dev)
+
+| Grafana | Prometheus | Postman | VS Code | Vim |
+|:---:|:---:|:---:|:---:|:---:|
+
+### Automation & Browser Testing
+
+[![Automation](https://skillicons.dev/icons?i=selenium,playwright&perline=2)](https://skillicons.dev)
+
+| Selenium | Playwright |
+|:---:|:---:|
 
 </div>
 
