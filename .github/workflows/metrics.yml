@@ -50,3 +50,8 @@ jobs:
 
           plugin_stars: yes
           plugin_stars_limit: 4
+
+          plugin_reactions: yes
+          plugin_reactions_limit: 200
+          plugin_reactions_limit_issues: 100
+          plugin_reactions_days: 30
