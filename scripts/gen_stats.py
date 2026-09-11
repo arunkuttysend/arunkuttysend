@@ -63,6 +63,17 @@ query($login:String!,$cursor:String){
     }
   }
 }"""
+COMMITS_Q = """
+query($login:String!,$since:GitTimestamp!){
+  user(login:$login){
+    repositories(first:25,ownerAffiliations:OWNER,orderBy:{field:PUSHED_AT,direction:DESC}){
+      nodes{ isFork defaultBranchRef{ target{ ... on Commit {
+        history(first:100,since:$since){ nodes{ committedDate author{ user{ login } } } } } } } }
+    }
+  }
+}"""
+IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
+PULSE_DAYS = 90
 
 
 # --------------------------------------------------------------------------- #
@@ -115,7 +126,26 @@ def fetch(token: str, login: str) -> dict[str, Any]:
         cursor = page["pageInfo"]["endCursor"]
     profile["repos"] = repos
     profile["generated_at"] = now.isoformat()
+    profile["commit_times"] = fetch_commit_times(token, login, now)
     return profile
+
+
+def fetch_commit_times(token: str, login: str, now: dt.datetime) -> list[str]:
+    """Commit timestamps (UTC ISO) authored by `login` on the 25 most recently pushed repos.
+
+    Only timestamps leave this function — no repo names or messages — so private
+    work contributes to the rhythm chart without being disclosed.
+    """
+    since = (now - dt.timedelta(days=PULSE_DAYS)).isoformat()
+    data = graphql(token, COMMITS_Q, {"login": login, "since": since})["user"]["repositories"]["nodes"]
+    out: list[str] = []
+    for repo in data:
+        target = (repo.get("defaultBranchRef") or {}).get("target") or {}
+        for c in (target.get("history") or {}).get("nodes", []):
+            user = (c.get("author") or {}).get("user") or {}
+            if (user.get("login") or "").lower() == login.lower():
+                out.append(c["committedDate"])
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -138,6 +168,9 @@ class Stats:
     longest_streak: int
     days: list[tuple[dt.date, int]] = field(default_factory=list)
     langs: list[tuple[str, str, float]] = field(default_factory=list)   # (name, colour, share)
+    hours: list[int] = field(default_factory=lambda: [0] * 24)          # commits per IST hour
+    weekdays: list[int] = field(default_factory=lambda: [0] * 7)        # Mon..Sun
+    commits_90d: int = 0
 
 
 def streaks(days: list[tuple[dt.date, int]], today: dt.date) -> tuple[int, int]:
@@ -181,7 +214,15 @@ def aggregate(raw: dict[str, Any], exclude: set[str], top: int = 8) -> Stats:
     if rest:
         langs.append(("Other", "#6e7681", rest / total))
 
+    hours, weekdays = [0] * 24, [0] * 7
+    times = raw.get("commit_times", [])
+    for ts in times:
+        local = dt.datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(IST)
+        hours[local.hour] += 1
+        weekdays[local.weekday()] += 1
+
     return Stats(
+        hours=hours, weekdays=weekdays, commits_90d=len(times),
         login=raw["login"], generated=generated,
         contributions=cc["contributionCalendar"]["totalContributions"],
         commits=cc["totalCommitContributions"] + cc["restrictedContributionsCount"],
@@ -363,6 +404,83 @@ def activity_card(s: Stats, t: Theme) -> str:
     return svg_doc(W, H, body, title=f"Contribution heatmap for {s.login}", css=css)
 
 
+def peak_window(hours: list[int], width: int = 3) -> int:
+    """Start hour of the busiest `width`-hour window (wraps around midnight)."""
+    return max(range(24), key=lambda h: sum(hours[(h + i) % 24] for i in range(width)))
+
+
+def pulse_card(s: Stats, t: Theme) -> str:
+    import math
+    W, H = 1200, 304
+    cx, cy, r0, rmax = 196, 176, 36, 94
+    peak = max(s.hours) or 1
+    bars = []
+    for h, n in enumerate(s.hours):
+        a = -math.pi / 2 + 2 * math.pi * (h + 0.5) / 24
+        length = (rmax - r0) * n / peak if n else 2
+        x1, y1 = cx + r0 * math.cos(a), cy + r0 * math.sin(a)
+        x2, y2 = cx + (r0 + length) * math.cos(a), cy + (r0 + length) * math.sin(a)
+        colour = t.purple if (h >= 22 or h < 5) else (t.cyan if h < 17 else t.pink)
+        bars.append(
+            f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{colour}" stroke-width="9" stroke-linecap="round" '
+            f'stroke-dasharray="{length + 2:.1f}" stroke-dashoffset="{length + 2:.1f}">'
+            f'<animate attributeName="stroke-dashoffset" to="0" dur=".8s" begin="{0.03 * h:.2f}s" fill="freeze"/></line>'
+        )
+    labels = "".join(
+        f'<text x="{cx + (rmax + 16) * math.cos(-math.pi / 2 + 2 * math.pi * h / 24):.1f}" '
+        f'y="{cy + 4 + (rmax + 16) * math.sin(-math.pi / 2 + 2 * math.pi * h / 24):.1f}" text-anchor="middle" '
+        f'font-family="{MONO}" font-size="10.5" fill="{t.muted}">{h:02d}</text>'
+        for h in (0, 6, 12, 18)
+    )
+    sweep = (
+        f'<line x1="{cx}" y1="{cy}" x2="{cx}" y2="{cy - rmax - 4}" stroke="{t.text}" stroke-opacity=".5" stroke-width="1.5">'
+        f'<animateTransform attributeName="transform" type="rotate" from="0 {cx} {cy}" to="360 {cx} {cy}" dur="12s" repeatCount="indefinite"/></line>'
+        f'<circle cx="{cx}" cy="{cy}" r="{r0 - 8}" fill="{t.bg0}" stroke="{t.border}"/>'
+        f'<text x="{cx}" y="{cy - 2}" text-anchor="middle" font-family="{MONO}" font-size="15" font-weight="800" fill="{t.text}">IST</text>'
+        f'<text x="{cx}" y="{cy + 13}" text-anchor="middle" font-family="{MONO}" font-size="9" fill="{t.muted}">24h</text>'
+    )
+    # weekday bars
+    wx, wy, wh, bw = 372, 256, 150, 34
+    wpeak = max(s.weekdays) or 1
+    wbars = []
+    for i, (name, n) in enumerate(zip(("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), s.weekdays)):
+        h = max(3.0, wh * n / wpeak)
+        x = wx + i * (bw + 14)
+        wbars.append(
+            f'<rect x="{x}" y="{wy - h:.1f}" width="{bw}" height="{h:.1f}" rx="6" fill="url(#wk)">'
+            f'<animate attributeName="height" from="0" to="{h:.1f}" dur=".7s" begin="{0.3 + 0.06 * i:.2f}s" fill="freeze"/>'
+            f'<animate attributeName="y" from="{wy}" to="{wy - h:.1f}" dur=".7s" begin="{0.3 + 0.06 * i:.2f}s" fill="freeze"/></rect>'
+            f'<text x="{x + bw / 2}" y="{wy + 18}" text-anchor="middle" font-family="{MONO}" font-size="11" fill="{t.muted}">{name}</text>'
+            f'<text x="{x + bw / 2}" y="{wy - h - 7:.1f}" text-anchor="middle" font-family="{MONO}" font-size="10.5" fill="{t.text}">{n}</text>'
+        )
+    start = peak_window(s.hours)
+    night = sum(s.hours[h] for h in (22, 23, 0, 1, 2, 3, 4))
+    total = sum(s.hours) or 1
+    busiest_day = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")[max(range(7), key=lambda i: s.weekdays[i])]
+    facts = (
+        ("peak window", f"{start:02d}:00–{(start + 3) % 24:02d}:00 IST", t.cyan),
+        (f"commits · last {PULSE_DAYS} days", str(s.commits_90d), t.text),
+        ("busiest day", busiest_day, t.pink),
+        ("after-hours share (22–05)", f"{100 * night / total:.0f}%", t.purple),
+    )
+    fx = 770
+    frows = "".join(
+        f'<g class="row" style="animation-delay:{0.5 + 0.1 * i:.1f}s">'
+        f'<text x="{fx}" y="{104 + i * 46}" font-family="{SANS}" font-size="13" fill="{t.muted}">{esc(label)}</text>'
+        f'<text x="{W - 32}" y="{104 + i * 46}" text-anchor="end" font-family="{MONO}" font-size="20" font-weight="800" fill="{colour}">{esc(value)}</text>'
+        f'<line x1="{fx}" x2="{W - 32}" y1="{118 + i * 46}" y2="{118 + i * 46}" stroke="{t.border}"/></g>'
+        for i, (label, value, colour) in enumerate(facts)
+    )
+    body = (
+        f'<defs><linearGradient id="wk" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="{t.cyan}"/>'
+        f'<stop offset="1" stop-color="{t.purple}"/></linearGradient></defs>'
+        + _frame(t, W, H, "Coding pulse · when I ship", f"commit rhythm · last {PULSE_DAYS} days · IST")
+        + f'<circle cx="{cx}" cy="{cy}" r="{rmax}" fill="none" stroke="{t.border}" stroke-dasharray="2 5"/>'
+        + "".join(bars) + labels + sweep + "".join(wbars) + frows
+    )
+    return svg_doc(W, H, body, title=f"Coding pulse for {s.login}: commits by hour of day (IST) and weekday", css=CARD_CSS)
+
+
 # --------------------------------------------------------------------------- #
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -392,7 +510,7 @@ def main(argv: list[str] | None = None) -> int:
     # Render everything in memory first; only touch disk once all cards succeeded.
     rendered = {
         f"{name}-{t.name}.svg": fn(stats, t)
-        for name, fn in (("stats", stats_card), ("langs", langs_card), ("activity", activity_card))
+        for name, fn in (("stats", stats_card), ("langs", langs_card), ("activity", activity_card), ("pulse", pulse_card))
         for t in THEMES
     }
     args.out.mkdir(parents=True, exist_ok=True)

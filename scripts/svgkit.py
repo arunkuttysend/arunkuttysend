@@ -19,6 +19,11 @@ MONO = "ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',m
 
 @dataclass(frozen=True, slots=True)
 class Theme:
+    """"Aurora cyber" palette: deep-space ground, cyan → violet → magenta light.
+
+    Attribute names are semantic-ish (blue/purple/pink…) so renderers stay
+    readable; the actual hues are the aurora set.
+    """
     name: str
     bg0: str
     bg1: str
@@ -26,24 +31,25 @@ class Theme:
     border: str
     text: str
     muted: str
+    cyan: str
     blue: str
     purple: str
+    pink: str
     green: str
     amber: str
-    pink: str
     red: str
     glow_opacity: float
 
 
 DARK = Theme(
-    name="dark", bg0="#0d1117", bg1="#0b0f1a", panel="#161b22", border="#30363d",
-    text="#e6edf3", muted="#8b949e", blue="#58a6ff", purple="#a371f7",
-    green="#3fb950", amber="#d29922", pink="#f778ba", red="#f85149", glow_opacity=0.35,
+    name="dark", bg0="#070b16", bg1="#0c1024", panel="#0f1629", border="#223056",
+    text="#e8edff", muted="#8f9bbf", cyan="#22d3ee", blue="#60a5fa", purple="#a78bfa",
+    pink="#f472b6", green="#34d399", amber="#fbbf24", red="#fb7185", glow_opacity=0.42,
 )
 LIGHT = Theme(
-    name="light", bg0="#ffffff", bg1="#f6f8fa", panel="#f6f8fa", border="#d0d7de",
-    text="#1f2328", muted="#59636e", blue="#0969da", purple="#8250df",
-    green="#1a7f37", amber="#9a6700", pink="#bf3989", red="#cf222e", glow_opacity=0.16,
+    name="light", bg0="#ffffff", bg1="#f4f6ff", panel="#f3f5fd", border="#d5dcf0",
+    text="#0f172a", muted="#51607e", cyan="#0891b2", blue="#2563eb", purple="#7c3aed",
+    pink="#db2777", green="#059669", amber="#b45309", red="#e11d48", glow_opacity=0.18,
 )
 THEMES: tuple[Theme, ...] = (DARK, LIGHT)
 

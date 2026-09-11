@@ -28,6 +28,7 @@ def fake_payload(seed: int = 7, today: dt.date = dt.date(2026, 9, 11)) -> dict:
             "totalIssueContributions": 4,
             "contributionCalendar": {"totalContributions": sum(d["contributionCount"] for d in days), "weeks": weeks},
         },
+        "commit_times": [f"2026-09-{d:02d}T{h:02d}:15:00Z" for d in range(1, 11) for h in (4, 16, 17, 20)],
         "repos": [
             {"stargazerCount": 3, "forkCount": 0, "languages": {"edges": [
                 {"size": 5000, "node": {"name": "PHP", "color": "#4F5D95"}},
@@ -69,8 +70,31 @@ class AggregateTests(unittest.TestCase):
 
     def test_all_cards_are_valid_xml(self):
         s = gs.aggregate(fake_payload(), exclude=set())
-        for fn in (gs.stats_card, gs.langs_card, gs.activity_card):
+        for fn in (gs.stats_card, gs.langs_card, gs.activity_card, gs.pulse_card):
             xml.dom.minidom.parseString(fn(s, DARK))
+
+
+class PulseTests(unittest.TestCase):
+    def test_hours_are_bucketed_in_ist(self):
+        s = gs.aggregate(fake_payload(), exclude=set())
+        # 16:15Z -> 21:45 IST, 17:15Z -> 22:45 IST, 04:15Z -> 09:45, 20:15Z -> 01:45
+        self.assertEqual(s.hours[21], 10)
+        self.assertEqual(s.hours[22], 10)
+        self.assertEqual(s.hours[9], 10)
+        self.assertEqual(s.hours[1], 10)
+        self.assertEqual(s.commits_90d, 40)
+
+    def test_peak_window_wraps_midnight(self):
+        hours = [0] * 24
+        hours[23] = hours[0] = hours[1] = 5
+        self.assertEqual(gs.peak_window(hours), 23)
+
+    def test_missing_commit_times_is_tolerated(self):
+        raw = fake_payload()
+        raw.pop("commit_times")
+        s = gs.aggregate(raw, exclude=set())
+        self.assertEqual(sum(s.hours), 0)
+        xml.dom.minidom.parseString(gs.pulse_card(s, DARK))
 
 
 class HumanTests(unittest.TestCase):
