@@ -31,7 +31,7 @@ jobs:
     env:
       USERNAME: ${{ github.repository_owner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Restore current output branch
         run: |
@@ -44,7 +44,7 @@ jobs:
           fi
           ls -la dist
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -68,8 +68,9 @@ jobs:
             dist/github-contribution-grid-snake.svg
             dist/github-contribution-grid-snake-dark.svg?palette=github-dark
 
+      # NOTE: no `id:` here — lowlighter/metrics derives "official vs fork" from the
+      # step id; setting one makes it skip the prebuilt image and rebuild from source.
       - name: Deep metrics (3D calendar, habits, achievements)
-        id: metrics
         continue-on-error: true
         uses: lowlighter/metrics@latest
         with:
@@ -93,8 +94,13 @@ jobs:
           plugin_achievements_limit: 8
 
       - name: Collect metrics render
-        if: steps.metrics.outcome == 'success'
-        run: sudo cp /metrics_renders/metrics.svg dist/metrics.svg
+        if: always()
+        run: |
+          if [ -f /metrics_renders/metrics.svg ]; then
+            sudo cp /metrics_renders/metrics.svg dist/metrics.svg
+          else
+            echo "::warning::metrics render missing — keeping previous dist/metrics.svg"
+          fi
 
       - name: Publish to output branch
         working-directory: dist
